@@ -1,13 +1,3 @@
--- ============================================================
--- Sales Dashboard for Regional Performance
--- Script 03: Analytical Queries & KPI Views
--- ============================================================
-
--- ============================================================
--- QUERY 1  |  Master Analysis-Ready Dataset
---           Joins all 3 tables into a single flat view
---           used as the Power BI source
--- ============================================================
 CREATE OR REPLACE VIEW vw_sales_master AS
 SELECT
     o.row_id,
@@ -39,18 +29,13 @@ SELECT
 FROM orders o
 JOIN customers c ON o.customer_id = c.customer_id
 JOIN products  p ON (
-    -- Products are joined via the original dataset row_id mapping.
-    -- If you created an order_items bridge table, join on order_id+product_id.
-    -- Using row_id lookup from the source data here:
+
     p.product_id = (
         SELECT product_id FROM order_items oi
         WHERE oi.row_id = o.row_id LIMIT 1
     )
 );
 
--- ============================================================
--- QUERY 2  |  KPI 1 – Total Sales, Profit & Orders by Region
--- ============================================================
 SELECT
     region,
     COUNT(DISTINCT order_id)          AS total_orders,
@@ -62,10 +47,6 @@ FROM orders
 GROUP BY region
 ORDER BY total_sales DESC;
 
--- ============================================================
--- QUERY 3  |  KPI 2 – Monthly Sales Trend per Region
---            (12-month rolling view)
--- ============================================================
 SELECT
     region,
     DATE_TRUNC('month', order_date)   AS sales_month,
@@ -77,11 +58,7 @@ FROM orders
 GROUP BY region, DATE_TRUNC('month', order_date), TO_CHAR(order_date, 'Mon YYYY')
 ORDER BY region, sales_month;
 
--- ============================================================
--- QUERY 4  |  KPI 3 – Post-Festival Sales Drop Detection
---            Festival window: Oct–Nov  |  Post: Dec–Jan
---            Finding: South region -14% drop
--- ============================================================
+
 WITH festival AS (
     SELECT
         region,
@@ -117,9 +94,6 @@ FROM festival f
 JOIN post_festival pf ON f.region = pf.region
 ORDER BY pct_change;
 
--- ============================================================
--- QUERY 5  |  KPI 4 – Top 10 Products by Revenue
--- ============================================================
 SELECT
     p.product_name,
     p.category,
@@ -128,14 +102,11 @@ SELECT
     SUM(o.profit)   AS total_profit,
     SUM(o.quantity) AS total_qty
 FROM orders o
-JOIN products p ON o.row_id = p.row_id   -- adjust join if using order_items
+JOIN products p ON o.row_id = p.row_id   
 GROUP BY p.product_name, p.category, p.sub_category
 ORDER BY total_sales DESC
 LIMIT 10;
 
--- ============================================================
--- QUERY 6  |  KPI 5 – Category Performance by Region
--- ============================================================
 SELECT
     o.region,
     p.category,
@@ -148,9 +119,6 @@ JOIN products p ON o.row_id = p.row_id
 GROUP BY o.region, p.category
 ORDER BY o.region, total_sales DESC;
 
--- ============================================================
--- QUERY 7  |  KPI 6 – Discount vs Profit Correlation
--- ============================================================
 SELECT
     CASE
         WHEN discount = 0            THEN '0% – No Discount'
@@ -168,9 +136,6 @@ FROM orders
 GROUP BY discount_band
 ORDER BY discount_band;
 
--- ============================================================
--- QUERY 8  |  KPI 7 – Customer Segment Revenue & Profitability
--- ============================================================
 SELECT
     c.segment,
     o.region,
@@ -184,9 +149,6 @@ JOIN customers c ON o.customer_id = c.customer_id
 GROUP BY c.segment, o.region
 ORDER BY total_sales DESC;
 
--- ============================================================
--- QUERY 9  |  KPI 8 – Ship Mode Efficiency (Avg Days to Ship)
--- ============================================================
 SELECT
     ship_mode,
     region,
@@ -200,9 +162,6 @@ WHERE ship_date IS NOT NULL
 GROUP BY ship_mode, region
 ORDER BY avg_days_to_ship;
 
--- ============================================================
--- QUERY 10 |  KPI 9 – Sub-Category Profitability Ranking
--- ============================================================
 SELECT
     p.category,
     p.sub_category,
@@ -216,9 +175,6 @@ JOIN products p ON o.row_id = p.row_id
 GROUP BY p.category, p.sub_category
 ORDER BY p.category, profit_rank;
 
--- ============================================================
--- QUERY 11 |  KPI 10 – YoY / MoM Growth Rate
--- ============================================================
 WITH monthly AS (
     SELECT
         region,
@@ -238,10 +194,6 @@ SELECT
 FROM monthly
 ORDER BY region, month;
 
--- ============================================================
--- QUERY 12 |  Return/Loss Orders (Negative Profit)
---            Proxy for returns since return flag not in dataset
--- ============================================================
 SELECT
     o.region,
     p.category,
