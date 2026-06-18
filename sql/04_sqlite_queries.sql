@@ -1,10 +1,3 @@
--- ============================================================
--- Sales Dashboard for Regional Performance
--- Script 04: SQLite Version (runs locally, no server needed)
--- Usage: sqlite3 sales_dashboard.db < 04_sqlite_queries.sql
--- ============================================================
-
--- Create tables
 CREATE TABLE IF NOT EXISTS customers (
     customer_id   TEXT PRIMARY KEY,
     customer_name TEXT,
@@ -37,17 +30,6 @@ CREATE TABLE IF NOT EXISTS orders (
     profit      REAL
 );
 
--- Load CSV data (SQLite .import command)
--- Run these in the sqlite3 shell:
--- .mode csv
--- .headers on
--- .import customers.csv customers
--- .import products.csv products
--- .import orders.csv orders
-
--- ============================================================
--- KPI 1: Sales summary by region
--- ============================================================
 SELECT
     region,
     COUNT(DISTINCT order_id)          AS total_orders,
@@ -59,9 +41,6 @@ FROM orders
 GROUP BY region
 ORDER BY total_sales DESC;
 
--- ============================================================
--- KPI 2: Monthly trend
--- ============================================================
 SELECT
     region,
     SUBSTR(order_date, 1, 7)   AS month,
@@ -71,9 +50,6 @@ FROM orders
 GROUP BY region, SUBSTR(order_date, 1, 7)
 ORDER BY region, month;
 
--- ============================================================
--- KPI 3: Post-festival drop (Oct-Nov vs Dec-Jan)
--- ============================================================
 WITH festival AS (
     SELECT region, SUM(sales) AS fest_sales
     FROM orders
@@ -95,9 +71,6 @@ FROM festival f
 JOIN post p ON f.region = p.region
 ORDER BY pct_change;
 
--- ============================================================
--- KPI 4: Discount impact on profitability
--- ============================================================
 SELECT
     CASE
         WHEN discount = 0              THEN '0%'
@@ -113,9 +86,6 @@ FROM orders
 GROUP BY discount_band
 ORDER BY discount_band;
 
--- ============================================================
--- KPI 5: Loss orders by region (proxy for returns)
--- ============================================================
 SELECT
     region,
     COUNT(*) AS loss_orders,
